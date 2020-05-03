@@ -1,5 +1,9 @@
 <?php
 
+require_once __DIR__ . '/../../../init.php';
+
+use Illuminate\Database\Capsule\Manager as Capsule;
+
 /**
  * Generate array of login and password
  * for auth in nic.ru
@@ -220,26 +224,19 @@ function __nicRU_parse_query($text) {
  * @return string         client login for nic.ru
  */
 function __nicRU_get_anketa($userid) {
-    global $whmcsmysql;
+    $result = Capsule::table('module_nic_ru_anketa')
+        ->select('anketa')
+        ->where('userid', '=', (int)$userid)
+        ->get();
 
-    $sql    = 'SELECT
-                    module_nic_ru_anketa.anketa
-                FROM module_nic_ru_anketa
-                WHERE
-                    module_nic_ru_anketa.userid = ' . (int)$userid . '
-                LIMIT 0, 1';
-    $result = mysql_query($sql, $whmcsmysql);
+    $result = json_decode(json_encode($result), true);
 
-    if (mysql_num_rows($result) == 0) {
-        unset($sql, $result);
-
+    if (count($result) == 0) {
         return NULL;
     }
 
-    $row    = mysql_fetch_assoc($result);
+    $row    = $result[0];
     $anketa = $row['anketa'];
-
-    unset($sql, $result, $row);
 
     return $anketa;
 }
@@ -252,19 +249,14 @@ function __nicRU_get_anketa($userid) {
  * @param  string $password nic.ru client password
  */
 function __nicRU_put_anketa($userid, $anketa, $password) {
-    global $whmcsmysql;
-
-    $sql = 'INSERT INTO
-                module_nic_ru_anketa(userid, anketa, pass)
-            VALUES (%d, \'%s\', \'%s\')';
-
-    $anketa   = mysql_escape_string($anketa);
-    $password = mysql_escape_string($password);
-
-    $sql    = sprintf($sql, $userid, $anketa, $password);
-    $result = mysql_query($sql, $whmcsmysql);
-
-    unset($sql, $result);
+    Capsule::table('module_nic_ru_anketa')
+        ->insert(
+            array(
+                'userid' => $userid,
+                'anketa' => $anketa,
+                'pass'   => $password,
+            ),
+        );
 }
 
 /**
@@ -274,26 +266,19 @@ function __nicRU_put_anketa($userid, $anketa, $password) {
  * @return string           client login for nic.ru
  */
 function __nicRU_get_domain_anketa($domainid) {
-    global $whmcsmysql;
+    $result = Capsule::table('module_nic_ru')
+        ->select('anketa')
+        ->where('domain_id', '=', (int)$domainid)
+        ->get();
 
-    $sql    = 'SELECT
-                    module_nic_ru.anketa
-                FROM module_nic_ru
-                WHERE
-                    module_nic_ru.domain_id = ' . (int)$domainid . '
-                LIMIT 0, 1';
-    $result = mysql_query($sql, $whmcsmysql);
+    $result = json_decode(json_encode($result), true);
 
-    if (mysql_num_rows($result) == 0) {
-        unset($sql, $result);
-
+    if (count($result) == 0) {
         return NULL;
     }
 
-    $row    = mysql_fetch_assoc($result);
+    $row    = $result[0];
     $anketa = $row['anketa'];
-
-    unset($sql, $result, $row);
 
     return $anketa;
 }
@@ -306,49 +291,32 @@ function __nicRU_get_domain_anketa($domainid) {
  * @param  string $password nic.ru client password
  */
 function __nicRU_put_domain_anketa($domainid, $anketa, $password) {
-    global $whmcsmysql;
-
-    $sql = 'INSERT INTO
-                module_nic_ru(domain_id, anketa, pass)
-            VALUES (%d, \'%s\', \'%s\')';
-
-    $anketa   = mysql_escape_string($anketa);
-    $password = mysql_escape_string($password);
-
-    $sql    = sprintf($sql, $domainid, $anketa, $password);
-    $result = mysql_query($sql, $whmcsmysql);
-
-    unset($sql, $result);
+    Capsule::table('module_nic_ru')
+        ->insert(
+            array(
+                'domain_id' => $domainid,
+                'anketa' => $anketa,
+                'pass'   => $password,
+            ),
+        );
 }
 
 function __nicRU_get_anketa_by_domainid($userid) {
-	global $whmcsmysql;
+	$result = Capsule::table('tbldomains')
+        ->select('module_nic_ru_anketa.anketa', 'module_nic_ru_anketa.pass')
+        ->join('module_nic_ru_anketa', 'module_nic_ru_anketa.userid', '=', 'tbldomains.userid')
+        ->where('tbldomains.id', '=', (int)$userid)
+        ->get();
 
-	$sql = 'SELECT
-				module_nic_ru_anketa.anketa,
-				module_nic_ru_anketa.pass
-			FROM
-				tbldomains
-				JOIN
-					module_nic_ru_anketa
-					ON
-						module_nic_ru_anketa.userid=tbldomains.userid
-			WHERE
-				tbldomains.id = ' . (int)$userid;
+    $result = json_decode(json_encode($result), true);
 
-	$result = mysql_query($sql, $whmcsmysql);
-
-    if (mysql_num_rows($result) == 0) {
-        unset($sql, $result);
-
+    if (count($result) == 0) {
         return NULL;
     }
 
-    $row    = mysql_fetch_assoc($result);
+    $row    = $result[0];
     $anketa = $row['anketa'];
     $pass   = $row['pass'];
-
-    unset($sql, $result, $row);
 
     return array($anketa, $pass);
 }
